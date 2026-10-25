@@ -15,53 +15,71 @@ def todos():
 ## Install
 
 - `uv add savitar` (or `uv add ./path/to/savitar` for a local copy)
-- Deps: `fastapi[standard]`, `bun-wheel` (provides `bun` in `<venv>/bin`)
+- Deps: `fastapi[standard]`, `bun-wheel` (provides `bun` in `<venv>/bin`), `tomlkit`
 - No system bun or node needed
-- svelte auto-installs into `<venv>/node_modules` on first start
+- svelte (and your `packages`) auto-install into `<venv>/node_modules` on first start/build
+- Needs a virtualenv (`uv run`); refuses to run against system Python
 
 ## Project layout
 
 ```
 main.py
+pyproject.toml        <- [tool.savitar] settings
 web/
   App.svelte          <- required entry
   store.svelte.js     <- rune modules (any *.svelte.js / *.svelte.ts)
   Other.svelte
 ```
 
-## Run
+## Settings
 
-- Dev (single process, rebuilds on change, refresh the browser manually):
-  `uv run fastapi dev main.py`
-- Prod (build once, then any number of workers):
-  ```
-  uv run savitar build            # or: uv run savitar build ui
-  SAVITAR_DEV=0 uv run fastapi run main.py --workers 4
-  ```
-- Prod workers do not need bun at runtime, only at build time
-- Forgot to build? Workers fail on startup with `run savitar build first`
+Your `pyproject.toml`:
 
-Package management
-
-Use `savitar pkg` to run Bun in the active uv environment. For example:
-
-```sh
-uv run savitar pkg add svelte
-uv run savitar pkg add blockly
-uv run savitar pkg remove svelte
+```toml
+[tool.savitar]
+web = "web"      # frontend folder, relative to pyproject.toml
+dev = false      # default false: serve a prebuilt frontend
+packages = []    # extra JS packages (managed by `savitar pkg`)
 ```
 
-This is equivalent to running Bun with `--cwd "$(uv run python -c 'import sys;print(sys.prefix)')"`.
-Packages installed this way can be imported from Svelte files, for example
-`import Blockly from "blockly"`.
+Precedence for `dev`: `Savitar.app(dev=...)` > env `SAVITAR_DEV` > `[tool.savitar] dev` > `false`.
+
+## Run
+
+- Prod (default): build once, then any number of workers
+  ```
+  uv run savitar build            # or: uv run savitar build ui
+  uv run fastapi run main.py --workers 4
+  ```
+- Dev (single process, rebuilds on change, refresh the browser manually):
+  `SAVITAR_DEV=1 uv run fastapi dev main.py`
+  or set `dev = true` in `[tool.savitar]`
+- Prod workers need bun only at build time
+- No build and dev off? Startup fails with `no build found`
+- Dev waits for the first build before serving
+
+## Packages
+
+`savitar pkg` runs Bun in the active venv and records packages in `[tool.savitar] packages`.
+If the venv is recreated, they are reinstalled automatically on next start/build.
+
+```sh
+uv run savitar pkg add blockly
+uv run savitar pkg add blockly@11
+uv run savitar pkg remove blockly
+```
+
+Then `import Blockly from "blockly"` in Svelte files. Other Bun commands pass through unrecorded.
+Project-local `node_modules` (next to `web/`) wins over the venv if both have a package.
 
 ## API
 
-`Savitar.app(web="web", dev=None, api_prefix="/api", lifespan=None, **fastapi_kwargs)`
+`Savitar.app(web=None, dev=None, api_prefix="/api", spa=True, lifespan=None, **fastapi_kwargs)`
 
-- `web`: frontend folder (needs `App.svelte`)
-- `dev`: `True` watch+rebuild, `False` serve only. Default: env `SAVITAR_DEV` (`1` if unset)
+- `web`: frontend folder (needs `App.svelte`). Default from settings, else `web`
+- `dev`: see Settings
 - `api_prefix`: prefix for all routes. `""` = plain FastAPI plus frontend
+- `spa`: unknown non-file, non-api paths return `index.html` (client-side routing). `False` = 404
 - `lifespan`: yours, wrapped (not replaced)
 - Anything else goes to `FastAPI(...)`
 
@@ -72,12 +90,13 @@ Packages installed this way can be imported from Svelte files, for example
 - Frontend is mounted at `/` on startup, after your routes
 - Lifespan order. Startup: Savitar, then yours. Shutdown: yours, then Savitar
 - Frontend calls the API with relative URLs: `fetch("/api/todos")`
+- Component `<style>` blocks work (injected); prod bundles are minified
 
 ## Files
 
-- Build output: `<venv>/savitar/web` (generated)
-- Temp entry: `<venv>/savitar/.entry.js` (generated)
-- Compiler/runtime: `<venv>/node_modules/svelte`
+- Build output: `<venv>/savitar/<hash>/web` (one per frontend folder, generated)
+- Temp: `<venv>/savitar/<hash>/.entry.js`, `.ready` (generated)
+- Compiler/runtime and packages: `<venv>/node_modules`
 
 ## Do NOT
 
@@ -99,18 +118,21 @@ Frontend
 Venv / files
 - Edit anything in `<venv>/savitar/`
 - Delete `<venv>/node_modules` while the server runs
-- Run with a different Python than uv's (svelte installs into that venv)
+- Run with a different Python than uv's (packages install into that venv)
 
 Run
-- Use `--workers N` in dev (each worker would spawn its own build)
-- Use `--reload` with `SAVITAR_DEV=0` and expect rebuilds
-- Forget `savitar build` before prod workers
+- Use `dev = true` / `SAVITAR_DEV=1` with `--workers N` (each worker would spawn its own build)
+- Forget `savitar build` before prod
 - Name your own object `Savitar`
 
 ## Troubleshooting
 
 - `bun not found`: run through `uv run`, or reinstall (`uv sync`)
-- `Could not resolve "svelte/..."`: the exports resolver in `src/savitar/build.js` (`sv()`); check `<venv>/node_modules/svelte/package.json`
+- `no virtualenv active`: use `uv run`
+- `Could not resolve "x"`: `uv run savitar pkg add x`
+- `Could not resolve "svelte/..."`: resolver in `src/savitar/build.js` (`resolveVenv`); check `<venv>/node_modules/svelte/package.json`
 - Blank page in prod: build missing or stale, run `savitar build`
 - Compile error: shown in the server console (dev) or fails `savitar build` (prod)
-- Status: untested, report resolver or `/api` prefix issues first
+- Dev: new packages need a server restart (only `web/` is watched)
+- Dev: a hard-killed server (SIGKILL) can leave the Bun watcher running, kill it manually
+- Status: untested

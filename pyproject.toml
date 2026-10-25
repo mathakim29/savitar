@@ -8,12 +8,10 @@ version = "0.1.0"
 description = "FastAPI + Svelte 5 (runes), built with Bun, all inside your venv"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["fastapi[standard]", "bun-wheel"]
+dependencies = ["fastapi[standard]", "bun-wheel", "tomlkit"]
 
 [project.scripts]
 savitar = "savitar.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/savitar"]
-
-# bun add svelte --cwd "$(uv run python -c 'import sys;print(sys.prefix)')"
