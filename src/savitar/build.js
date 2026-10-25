@@ -27,6 +27,12 @@ const svelte = {
   setup(b) {
     b.onResolve({ filter: /^svelte(\/|$)/ }, ({ path }) => ({ path: sv(path) }));
 
+    // Packages installed with `savitar pkg` live in uv's environment rather
+    // than beside the user's `web/` directory.
+    b.onResolve({ filter: /^[^./][^:]*$/ }, ({ path }) => ({
+      path: Bun.resolveSync(path, VENV),
+    }));
+
     b.onLoad({ filter: /\.svelte$/ }, async ({ path }) => ({
       contents: compile(await Bun.file(path).text(), {
         filename: path,

@@ -47,10 +47,13 @@ Use `savitar pkg` to run Bun in the active uv environment. For example:
 
 ```sh
 uv run savitar pkg add svelte
+uv run savitar pkg add blockly
 uv run savitar pkg remove svelte
 ```
 
 This is equivalent to running Bun with `--cwd "$(uv run python -c 'import sys;print(sys.prefix)')"`.
+Packages installed this way can be imported from Svelte files, for example
+`import Blockly from "blockly"`.
 
 ## API
 
