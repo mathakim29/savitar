@@ -41,6 +41,17 @@ web/
 - Prod workers do not need bun at runtime, only at build time
 - Forgot to build? Workers fail on startup with `run savitar build first`
 
+Package management
+
+Use `savitar pkg` to run Bun in the active uv environment. For example:
+
+```sh
+uv run savitar pkg add svelte
+uv run savitar pkg remove svelte
+```
+
+This is equivalent to running Bun with `--cwd "$(uv run python -c 'import sys;print(sys.prefix)')"`.
+
 ## API
 
 `Savitar.app(web="web", dev=None, api_prefix="/api", lifespan=None, **fastapi_kwargs)`

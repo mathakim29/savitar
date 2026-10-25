@@ -6,8 +6,17 @@ from .app import BUILD_JS, OUT, build_env, ensure_svelte, find_bun
 
 
 def main():
-    """savitar build [web_folder]  -> one-shot build (run before starting workers)"""
+    """Build the frontend or manage packages in uv's active environment."""
     args = sys.argv[1:]
+    if args and args[0] == "pkg":
+        pkg_args = args[1:]
+        if not pkg_args:
+            sys.exit("usage: savitar pkg <add|remove|...> [packages]")
+
+        bun = find_bun()
+        subprocess.run([bun, *pkg_args, "--cwd", str(Path(sys.prefix))], check=True)
+        return
+
     if args and args[0] == "build":
         args = args[1:]
     web = Path(args[0] if args else "web").resolve()

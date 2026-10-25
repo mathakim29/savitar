@@ -15,3 +15,5 @@ savitar = "savitar.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/savitar"]
+
+# bun add svelte --cwd "$(uv run python -c 'import sys;print(sys.prefix)')"
