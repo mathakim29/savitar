@@ -10,4 +10,4 @@ savitar = { path = "..", editable = true }
 [tool.savitar]
 web = "web"      # frontend folder
 dev = false      # false = serve a prebuilt frontend (`savitar build`); true = watch + rebuild
-packages = []    # extra JS packages, managed by `savitar pkg add/remove`
+packages = ["blockly", "axios"]    # extra JS packages, managed by `savitar pkg add/remove`

@@ -24,6 +24,14 @@ def pkg(args):
         config.remove_packages(names)
 
 
+def exec_bun(args):
+    """savitar exec <bun args>  -> run Bun with the active venv as --cwd."""
+    if not args:
+        sys.exit("usage: savitar exec <bun command> [args]")
+    check_venv()
+    return subprocess.run([find_bun(), "--cwd", str(VENV), *args]).returncode
+
+
 def build(args):
     """savitar build [web_folder]  -> one-shot build (run before starting workers)"""
     cfg, root = config.load()
@@ -42,6 +50,8 @@ def main():
     args = sys.argv[1:]
     if args and args[0] == "pkg":
         return pkg(args[1:])
+    if args and args[0] == "exec":
+        return exec_bun(args[1:])
     if args and args[0] == "build":
         args = args[1:]
     return build(args)

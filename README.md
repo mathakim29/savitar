@@ -72,6 +72,15 @@ uv run savitar pkg remove blockly
 Then `import Blockly from "blockly"` in Svelte files. Other Bun commands pass through unrecorded.
 Project-local `node_modules` (next to `web/`) wins over the venv if both have a package.
 
+To run any Bun command with the active venv as its working directory:
+
+```sh
+uv run savitar exec run script.ts
+uv run savitar exec test
+```
+
+Arguments are passed through to Bun; `savitar` supplies `--cwd <venv>`.
+
 ## API
 
 `Savitar.app(web=None, dev=None, api_prefix="/api", spa=True, lifespan=None, **fastapi_kwargs)`
