@@ -1,21 +1,78 @@
-<script>
-  import { todos, load } from "./store.svelte.js";
+<script lang="ts">
+  import Blockly from 'blockly/core';
+  import En from 'blockly/msg/en';
+  import 'blockly/blocks';
+  import 'blockly/javascript';
+  import BlocklyComponent, { type Locale } from 'blockly';
 
-  let count = $state(0);
-  let double = $derived(count * 2);
+  // 1. Setup localization
+  const en: Locale = {
+    rtl: false,
+    msg: {
+      ...En,
+    },
+  };
 
-  load();
+  // 2. Define Blockly configuration & toolbox
+  const config = {
+    toolbox: `
+      <xml xmlns="https://google.com">
+        <block type="controls_if"></block>
+        <block type="logic_compare"></block>
+        <block type="math_number">
+          <field name="NUM">123</field>
+        </block>
+        <block type="math_arithmetic"></block>
+      </xml>
+    `,
+    scrollbars: true,
+    trashcan: true,
+  };
+
+  // 3. Reference to the workspace instance
+  let workspace: Blockly.WorkspaceSvg | undefined = $state();
+  let generatedCode = $state('');
+
+  function updateCode() {
+    if (workspace) {
+      // Example: Transpile blocks to JavaScript
+      generatedCode = (Blockly as any).JavaScript.workspaceToCode(workspace);
+    }
+  }
 </script>
 
-<main style="font-family: sans-serif; text-align: center; margin-top: 50px;">
-  <h1>Savitar</h1>
-  <button onclick={() => count++}>Clicks: {count} (x2 = {double})</button>
+<div class="container">
+  <div class="blockly-wrapper">
+    <BlocklyComponent
+      {config}
+      locale={en}
+      bind:workspace
+      onchange={updateCode}
+    />
+  </div>
 
-  {#if todos.loading}
-    <p>Loading...</p>
-  {:else}
-    <ul style="list-style: none; padding: 0;">
-      {#each todos.items as t}<li>{t.title}</li>{/each}
-    </ul>
-  {/if}
-</main>
+  <div class="output">
+    <h3>Generated Code:</h3>
+    <pre>{generatedCode}</pre>
+  </div>
+</div>
+
+<style>
+  .container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .blockly-wrapper {
+    flex: 1;
+    min-height: 400px;
+    border: 1px solid #ccc;
+  }
+  .output {
+    background: #f4f4f4;
+    padding: 1rem;
+    border-radius: 4px;
+  }
+</style>
