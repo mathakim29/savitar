@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "savitar"
+version = "0.1.0"
+description = "FastAPI + Svelte 5 (runes), built with Bun, all inside your venv"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["fastapi[standard]", "bun-wheel"]
+
+[project.scripts]
+savitar = "savitar.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/savitar"]
