@@ -1,5 +1,6 @@
-import { watch, readFileSync } from "fs";
+import { watch, readFileSync, existsSync } from "fs";
 import { dirname, join, resolve } from "path";
+
 
 // env set by savitar (python)
 const VENV = resolve(process.env.VIRTUAL_ENV ?? ".venv");
@@ -58,6 +59,13 @@ const tryResolve = (spec, dir) => {
   }
 };
 
+const hasLocal = (name, dir) => {
+  for (let d = dir; ; d = dirname(d)) {
+    if (existsSync(join(d, "node_modules", name, "package.json"))) return true;
+    if (dirname(d) === d) return false;
+  }
+};
+
 function resolveVenv(spec) {
   const parts = spec.split("/");
   const name = spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
@@ -79,7 +87,8 @@ function resolveVenv(spec) {
   }
   if (!t) return undefined;
   t = t.replace(/^\.\//, "");
-  return tryResolve("./" + t, dir) ?? join(dir, t);
+  const f = join(dir, t);
+  return existsSync(f) ? f : (tryResolve("./" + t, dir) ?? f);
 }
 
 // ---- svelte compiler (always from the venv)
@@ -101,10 +110,12 @@ const svelte = {
     // Other bare imports: project-local node_modules wins (default resolution),
     // otherwise fall back to packages installed in the venv (`savitar pkg add`).
     b.onResolve({ filter: /^[^./][^:]*$/ }, ({ path, importer }) => {
-      if (tryResolve(path, importer ? dirname(importer) : SRC)) return undefined;
-      const p = resolveVenv(path);
-      return p ? { path: p } : undefined;
-    });
+  const parts = path.split("/");
+  const name = path.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
+  if (hasLocal(name, importer ? dirname(importer) : SRC)) return undefined;
+  const p = resolveVenv(path);
+  return p ? { path: p } : undefined;
+});
 
     b.onLoad({ filter: /\.svelte$/ }, async ({ path }) => ({
       contents: compile(await Bun.file(path).text(), {
