@@ -1,5 +1,5 @@
 import { watch } from "fs";
-import { join, resolve } from "path";
+import { isAbsolute, join, resolve } from "path";
 
 // env set by savitar (python)
 const VENV = resolve(process.env.VIRTUAL_ENV ?? ".venv");
@@ -29,9 +29,15 @@ const svelte = {
 
     // Packages installed with `savitar pkg` live in uv's environment rather
     // than beside the user's `web/` directory.
-    b.onResolve({ filter: /^[^./][^:]*$/ }, ({ path }) => ({
-      path: Bun.resolveSync(path, VENV),
-    }));
+    b.onResolve({ filter: /^[^./][^:]*$/ }, ({ path }) => {
+      try {
+        const resolved = Bun.resolveSync(path, VENV);
+        return isAbsolute(resolved) ? { path: resolved } : undefined;
+      } catch {
+        // Let Bun handle built-ins and unresolved imports normally.
+        return undefined;
+      }
+    });
 
     b.onLoad({ filter: /\.svelte$/ }, async ({ path }) => ({
       contents: compile(await Bun.file(path).text(), {
