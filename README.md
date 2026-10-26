@@ -13,10 +13,15 @@ def todos():
 ```
 
 ## Install
+```bash
+uv add https://github.com/mathakim29/savitar.git
+```
 
-- `uv add savitar` (or `uv add ./path/to/savitar` for a local copy)
-- Deps: `fastapi[standard]`, `bun-wheel` (provides `bun` in `<venv>/bin`), `tomlkit`
-- No system bun or node needed
+
+
+
+### Notes:
+- No system bun or node needed by default (preinstalled with bun-wheels)
 - svelte (and your `packages`) auto-install into `<venv>/node_modules` on first start/build
 - Needs a virtualenv (`uv run`); refuses to run against system Python
 
